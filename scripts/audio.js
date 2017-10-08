@@ -80,32 +80,39 @@ var audio = (function () {
 
     // Sample library
     var library = {};
+    var airportReverb = null;
+    var roomReverb = null;
 
     // Helper function to get a "player" for a sound
-    function player (source) {
+    function loopPlayer (buffer, reverb) {
         var _playing = false;
+
+        // Buffer source
+        var source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.loop = true;
+        source.start();
 
         // Processing nodes
         var filter = ctx.createBiquadFilter();
         var distortion = ctx.createWaveShaper();
         var compressor = ctx.createDynamicsCompressor();
-        //var reverb = ctx.createConvolver();
+        var reverb = ctx.createConvolver();
         var pan = ctx.createStereoPanner();
         var gain = ctx.createGain();
 
         // Initial settings
         filter.type = 'bandpass'
-        filter.frequency.value = 2000
-        filter.gain.value = 0
-
-        //reverb.buffer = new AudioBuffer([1, 19, 892])
+        filter.frequency.value = 500
+        filter.Q = 5
+        reverb.buffer = reverb === 'airport' ? airportReverb : roomReverb;
 
         // Connect up the signal path
         source.connect(filter);
         filter.connect(distortion);
         distortion.connect(compressor);
-        //compressor.connect(reverb);
-        compressor.connect(pan);
+        compressor.connect(reverb);
+        reverb.connect(pan);
         pan.connect(gain);
 
         // Functions to start and stop
@@ -131,7 +138,7 @@ var audio = (function () {
             filter: filter,
             distortion: distortion,
             compressor: compressor,
-            //reverb: reverb,
+            reverb: reverb,
             pan: pan,
             gain: gain,
             start: start,
@@ -139,42 +146,115 @@ var audio = (function () {
         };
     }
 
-    // Helper function to get a sound player for a sample
-    function loopPlayer (buffer) {
-        var source = ctx.createBufferSource();
-        source.buffer = buffer;
-        source.loop = true;
-        source.start();
-        return player(source);
+    // Helper function to get a "player" for an oscillator or noise generator
+    function noisePlayer (source, initialGain) {
+        var _playing = false;
+
+        // Processing nodes
+        var filter = ctx.createBiquadFilter();
+        var distortion = ctx.createWaveShaper();
+        var pan = ctx.createStereoPanner();
+        var gain = ctx.createGain();
+
+        // Initial settings
+        gain.gain.value = initialGain;
+        filter.type = 'bandpass'
+        filter.frequency.value = 500
+        filter.Q = 5
+
+        // Connect up the signal path
+        source.connect(filter);
+        filter.connect(distortion);
+        distortion.connect(pan);
+        pan.connect(gain);
+
+        // Functions to start and stop
+        function start() {
+            _playing = true;
+            gain.connect(ctx.destination);
+        }
+        function stop() {
+            _playing = false;
+            gain.disconnect();
+        }
+
+        // Check if a sound is playing
+        function playing() {
+            return _playing;
+        }
+
+
+        // Public API
+        return {
+            playing: playing,
+            source: source,
+            filter: filter,
+            distortion: distortion,
+            pan: pan,
+            gain: gain,
+            start: start,
+            stop: stop
+        };
     }
 
     // Load sound sample player into the library
-    function loadSample(name, url) {
+    function loadSample(name, url, reverbBuffer) {
         var request = new XMLHttpRequest();
         request.open('GET', url, true);
         request.responseType = 'arraybuffer';
         request.onload = function () {
             ctx.decodeAudioData(request.response, function (buffer) {
-                library[name] = loopPlayer(buffer);
+                library[name] = loopPlayer(buffer, reverbBuffer);
             });
         };
         request.send();
     }
 
+    // Load reverb buffers
+    var airportReverbRequest = new XMLHttpRequest();
+    airportReverbRequest.open('GET', 'sounds/airport_reverb.mp3', true);
+    airportReverbRequest.responseType = 'arraybuffer';
+    airportReverbRequest.onload = function () {
+        ctx.decodeAudioData(airportReverbRequest.response, function (buffer) { airportReverb = buffer; });
+    };
+    airportReverbRequest.send();
+    var roomReverbRequest = new XMLHttpRequest();
+    roomReverbRequest.open('GET', 'sounds/room_reverb.mp3', true);
+    roomReverbRequest.responseType = 'arraybuffer';
+    roomReverbRequest.onload = function () {
+        ctx.decodeAudioData(roomReverbRequest.response, function (buffer) { roomReverb = buffer; });
+    };
+    roomReverbRequest.send();
+
     // Loop sources
-    loadSample('chimes', 'sounds/chimes.mp3');
-    loadSample('hum', 'sounds/hum.mp3');
-    loadSample('whip', 'sounds/whip.mp3');
-    loadSample('plazaWind', 'sounds/plaza_wind.mp3');
-    loadSample('guitar', 'sounds/guitar.mp3');
-    loadSample('wineGlass', 'sounds/wine_glass.mp3');
+    loadSample('chimes', 'sounds/chimes.mp3', 'airport');
+    loadSample('hum', 'sounds/hum.mp3', 'room');
+    loadSample('whip', 'sounds/whip.mp3', 'room');
+    loadSample('plazaWind', 'sounds/plaza_wind.mp3', 'airport');
+    loadSample('guitar', 'sounds/guitar.mp3', 'airport');
+    loadSample('reading', 'sounds/reading.mp3', 'room');
 
     // Noise sources
-    library.whiteNoise = player(ctx.createWhiteNoise());
-    library.pinkNoise = player(ctx.createPinkNoise());
-    library.brownNoise = player(ctx.createBrownNoise());
+    library.whiteNoise = noisePlayer(ctx.createWhiteNoise(), 0.05);
+    library.pinkNoise = noisePlayer(ctx.createPinkNoise(), 0.05);
+    library.brownNoise = noisePlayer(ctx.createBrownNoise(), 0.05);
+
+    // Oscillators
+    library.sine = noisePlayer(ctx.createOscillator(), 0.05);
+    library.sine.source.tyoe = 'sine';
+    library.sine.source.frequency.value = 160;
+    library.sine.source.start();
+    library.sawtooth = noisePlayer(ctx.createOscillator(), 0.05);
+    library.sawtooth.source.tyoe = 'sawtooth';
+    library.sawtooth.source.frequency.value = 160;
+    library.sawtooth.source.start();
+    library.square = noisePlayer(ctx.createOscillator(), 0.05);
+    library.square.source.tyoe = 'square';
+    library.square.source.frequency.value = 160;
+    library.square.source.start();
 
     // Public API
+    ctx.playing = function () { return false; }
     library.ctx = ctx;
     return library;
 })();
