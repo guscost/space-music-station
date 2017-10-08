@@ -219,79 +219,77 @@ function app () {
 }
 
 // Mount the application
-var start = function () {
-    var live = protozoa(app());
-    document.querySelector('#protozoa-mount').appendChild(live);
+var live = protozoa(app());
+document.querySelector('#protozoa-mount').appendChild(live);
 
-    function alterOscillators () {
-        var cards = _.filter(live.ch, function (card) {
-            var sound = audio[card.ref];
-            return sound && sound.playing() && !!sound.source.frequency;
-        });
+function alterOscillators () {
+    var cards = _.filter(live.ch, function (card) {
+        var sound = audio[card.ref];
+        return sound && sound.playing() && !!sound.source.frequency;
+    });
 
-        cards.forEach(function (card) {
-            var sound = audio[card.ref];
-            var value = Math.min(400, Math.max(80, sound.source.frequency.value + Math.floor(Math.random() * 200) - 100));
-            card.card.body.form.frequencyGroup.input.value = value;
-            sound.source.frequency.linearRampToValueAtTime(
-                value,
-                audio.ctx.currentTime + Math.random() * 4
-            );
-            var value = Math.random() / 20;
-            card.card.body.form.gainGroup.input.value = value * 1000;
-            sound.gain.gain.linearRampToValueAtTime(
-                value,
-                audio.ctx.currentTime + Math.random() * 3
-            )
-        });
-        setTimeout(alterOscillators, Math.random() * 1000 + 2000);
-    }
-    alterOscillators();
-
-    
-    function alterRandomSample () {
-        var cards = _.filter(live.ch, function (card) {
-            var sound = audio[card.ref];
-            return sound && sound.playing() && !!sound.source.playbackRate;
-        });
-
-        if (cards.length) {
-            var card = _.sample(cards);
-            var sound = audio[card.ref];
-            var value = Math.random() / 2 + 0.25;
-            card.card.body.form.rateGroup.input.value = value * 1000;
-            sound.source.playbackRate.linearRampToValueAtTime(
-                value,
-                audio.ctx.currentTime + Math.random() * 10
-            )
-        }
-        setTimeout(alterRandomSample, Math.random() * 3000 + 2000);
-    }
-    alterRandomSample();
-
-
-    function alterRandomSound () {
-        var cards = _.filter(live.ch, function (card) {
-            var sound = audio[card.ref];
-            return sound && sound.playing();
-        });
-        if (cards.length) {
-            var card = _.sample(cards);
-            var sound = audio[card.ref];
-            var value = Math.random() - 0.5;
-            card.card.body.form.panGroup.input.value = value * 1600;
-            sound.pan.pan.linearRampToValueAtTime(value, audio.ctx.currentTime + Math.random() * 5);
-
-            var card = _.sample(cards);
-            var sound = audio[card.ref];
-            var value = Math.min(6000, Math.max(200, sound.filter.frequency.value + Math.floor(Math.random() * 1800) - 900));
-            card.card.body.form.filterFreqGroup.input.value = value;
-            sound.filter.frequency.linearRampToValueAtTime(
-                value,
-                audio.ctx.currentTime + Math.random() * 20
-            )
-            setTimeout(alterRandomSound, Math.random() * 3000 + 2000);
-        }
-    }
-    alterRandomSound();
+    cards.forEach(function (card) {
+        var sound = audio[card.ref];
+        var value = Math.min(400, Math.max(80, sound.source.frequency.value + Math.floor(Math.random() * 200) - 100));
+        card.card.body.form.frequencyGroup.input.value = value;
+        sound.source.frequency.linearRampToValueAtTime(
+            value,
+            audio.ctx.currentTime + Math.random() * 4
+        );
+        var value = Math.random() / 20;
+        card.card.body.form.gainGroup.input.value = value * 1000;
+        sound.gain.gain.linearRampToValueAtTime(
+            value,
+            audio.ctx.currentTime + Math.random() * 3
+        )
+    });
+    setTimeout(alterOscillators, Math.random() * 1000 + 2000);
 }
+alterOscillators();
+
+
+function alterRandomSample () {
+    var cards = _.filter(live.ch, function (card) {
+        var sound = audio[card.ref];
+        return sound && sound.playing() && !!sound.source.playbackRate;
+    });
+
+    if (cards.length) {
+        var card = _.sample(cards);
+        var sound = audio[card.ref];
+        var value = Math.random() / 2 + 0.25;
+        card.card.body.form.rateGroup.input.value = value * 1000;
+        sound.source.playbackRate.linearRampToValueAtTime(
+            value,
+            audio.ctx.currentTime + Math.random() * 10
+        )
+    }
+    setTimeout(alterRandomSample, Math.random() * 3000 + 2000);
+}
+alterRandomSample();
+
+
+function alterRandomSound () {
+    var cards = _.filter(live.ch, function (card) {
+        var sound = audio[card.ref];
+        return sound && sound.playing();
+    });
+    if (cards.length) {
+        var card = _.sample(cards);
+        var sound = audio[card.ref];
+        var value = Math.random() - 0.5;
+        card.card.body.form.panGroup.input.value = value * 1600;
+        sound.pan.pan.linearRampToValueAtTime(value, audio.ctx.currentTime + Math.random() * 5);
+
+        var card = _.sample(cards);
+        var sound = audio[card.ref];
+        var value = Math.min(6000, Math.max(200, sound.filter.frequency.value + Math.floor(Math.random() * 1800) - 900));
+        card.card.body.form.filterFreqGroup.input.value = value;
+        sound.filter.frequency.linearRampToValueAtTime(
+            value,
+            audio.ctx.currentTime + Math.random() * 20
+        )
+        setTimeout(alterRandomSound, Math.random() * 3000 + 2000);
+    }
+}
+alterRandomSound();
