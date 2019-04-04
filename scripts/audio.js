@@ -258,3 +258,5 @@ var audio = (function () {
     library.ctx = ctx;
     return library;
 })();
+
+window.addEventListener('click', audio.ctx.resume);
